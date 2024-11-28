@@ -1,0 +1,98 @@
+<!doctype html>
+<html>
+<head>
+    <title>Interactive Object Tracking</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        #video-container {
+            position: relative;
+            display: inline-block;
+        }
+        #selection-rect {
+            position: absolute;
+            border: 2px dashed red;
+            display: none;
+        }
+        button {
+            margin-top: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Interactive Object Tracking</h1>
+    <div id="video-container">
+        <!-- Display the video stream -->
+        <img id="video" src="/video_feed" width="640" height="480" />
+        <!-- Rectangle for area selection -->
+        <div id="selection-rect"></div>
+    </div>
+    <!-- Button to start tracking -->
+    <button id="start-tracking" disabled>Start Tracking</button>
+
+    <script>
+        const video = document.getElementById("video");
+        const selectionRect = document.getElementById("selection-rect");
+        const startTrackingButton = document.getElementById("start-tracking");
+
+        let startX, startY, endX, endY;
+
+		let isDragging = false;  // Track if the user is dragging
+
+
+		
+		video.addEventListener("click", (e) => {
+			const rect = video.getBoundingClientRect();
+			const x = e.clientX - rect.left;
+			const y = e.clientY - rect.top;
+
+			fetch("/smart_brush", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({ x, y }),
+			})
+				.then((response) => response.json())
+				.then((data) => {
+					if (data.status === "Tracking started") {
+						alert("Tracking started!");
+						const { coords } = data;
+						console.log("Tracking coords:", coords);
+					} else {
+						alert(data.error);
+					}
+				})
+				.catch((error) => console.error("Error:", error));
+		});
+
+
+
+
+        // Send the selected rectangle to the server for tracking
+        startTrackingButton.addEventListener("click", () => {
+            const x = parseInt(selectionRect.style.left);
+            const y = parseInt(selectionRect.style.top);
+            const w = parseInt(selectionRect.style.width);
+            const h = parseInt(selectionRect.style.height);
+
+            fetch("/start_tracking", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ x, y, w, h }),
+            })
+                .then((response) => response.json())
+                .then((data) => {
+                    console.log(data);
+                    alert("Tracking started!");
+                })
+                .catch((error) => console.error("Error:", error));
+        });
+    </script>
+</body>
+</html>

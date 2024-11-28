@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Advanced Object Detection and Tracking</title>
+    <style>
+        body { text-align: center; }
+        img { cursor: crosshair; }
+    </style>
+</head>
+<body>
+    <h1>Click on an Object to Start Tracking</h1>
+    <img id="videoFeed" src="{{ url_for('video_feed') }}" alt="Video Feed">
+
+    <script>
+        const videoFeed = document.getElementById('videoFeed');
+
+        videoFeed.addEventListener('click', function(event) {
+            // Get the click coordinates relative to the image
+            const rect = videoFeed.getBoundingClientRect();
+            const scaleX = videoFeed.naturalWidth / videoFeed.clientWidth;
+            const scaleY = videoFeed.naturalHeight / videoFeed.clientHeight;
+            const x = (event.clientX - rect.left) * scaleX;
+            const y = (event.clientY - rect.top) * scaleY;
+
+            // Send the coordinates to the server
+            fetch('/select_object', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ x: x, y: y }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.status);
+            });
+        });
+    </script>
+</body>
+</html>

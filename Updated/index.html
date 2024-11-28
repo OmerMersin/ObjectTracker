@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>WebRTC Video Stream</title>
+</head>
+<body>
+	<video id="video" autoplay playsinline muted controls></video>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+    var pc = null;
+    var localVideo = document.getElementById('video');
+
+    function negotiate() {
+        console.log('Starting negotiation');
+        return pc.createOffer().then(function (offer) {
+            return pc.setLocalDescription(offer);
+        }).then(function () {
+            return new Promise(function (resolve) {
+                if (pc.iceGatheringState === 'complete') {
+                    resolve();
+                } else {
+                    function checkState() {
+                        if (pc.iceGatheringState === 'complete') {
+                            pc.removeEventListener('icegatheringstatechange', checkState);
+                            resolve();
+                        }
+                    }
+                    pc.addEventListener('icegatheringstatechange', checkState);
+                }
+            });
+        }).then(function () {
+            var offer = pc.localDescription;
+            return fetch('/offer', {
+                body: JSON.stringify({
+                    sdp: offer.sdp,
+                    type: offer.type,
+                }),
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                method: 'POST',
+            });
+        }).then(function (response) {
+            return response.json();
+        }).then(function (answer) {
+            return pc.setRemoteDescription(answer);
+        }).catch(function (e) {
+            alert(e);
+        });
+    }
+
+    function start() {
+        pc = new RTCPeerConnection();
+
+        pc.addEventListener('track', function (evt) {
+            console.log('Received track:', evt.track.kind);
+            if (evt.track.kind == 'video') {
+                localVideo.srcObject = evt.streams[0];
+            }
+        });
+
+        pc.addEventListener('icegatheringstatechange', function () {
+            console.log('ICE gathering state changed:', pc.iceGatheringState);
+        });
+
+        pc.addEventListener('iceconnectionstatechange', function () {
+            console.log('ICE connection state changed:', pc.iceConnectionState);
+        });
+
+        pc.addEventListener('signalingstatechange', function () {
+            console.log('Signaling state changed:', pc.signalingState);
+        });
+
+        pc.addEventListener('connectionstatechange', function () {
+            console.log('Connection state changed:', pc.connectionState);
+        });
+
+        negotiate();
+    }
+
+    start();
+});
+
+    </script>
+</body>
+</html>
